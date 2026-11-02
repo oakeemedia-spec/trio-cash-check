@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Trio Cash Check</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one narrow column. Figures in, owner payouts next, bank reconciliation last. */
+:root{
+  --ground:#eef1f3;
+  --card:#ffffff;
+  --ink:#16202a;
+  --ink-soft:#5a6b78;
+  --ink-faint:#8b9aa5;
+  --rule:#d6dde2;
+  --sunk:#f5f7f8;
+  --teal:#0f6b63;
+  --red:#a8322a;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0f1519; --card:#18222a; --ink:#e8eef2; --ink-soft:#9fb0bb;
+    --ink-faint:#6f818d; --rule:#2a3741; --sunk:#121a20;
+    --teal:#5bbdb1; --red:#e4877e; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0f1519; --card:#18222a; --ink:#e8eef2; --ink-soft:#9fb0bb;
+  --ink-faint:#6f818d; --rule:#2a3741; --sunk:#121a20;
+  --teal:#5bbdb1; --red:#e4877e; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink); font-family:var(--sans);
+  line-height:1.5; -webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:clamp(1.5rem,5vw,3rem);
+}
+.wrap{max-width:31rem;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem}
+
+header h1{font-size:clamp(1.5rem,5vw,1.9rem);font-weight:700;letter-spacing:-.02em;margin:0 0 .25rem;text-wrap:balance}
+header p{margin:0;color:var(--ink-soft);font-size:.9rem;max-width:34em}
+
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:12px}
+.panel > h2{
+  font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);
+  font-weight:600;margin:0;padding:.85rem 1rem .5rem;
+}
+.panel > h2 .sub{display:block;letter-spacing:0;text-transform:none;font-size:.78rem;
+  font-weight:400;color:var(--ink-faint);margin-top:.25rem}
+
+.field{display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;border-top:1px solid var(--rule)}
+.field.first{border-top:none}
+.field label{flex:1;min-width:0;font-size:.93rem;font-weight:500}
+.field .hint{display:block;color:var(--ink-faint);font-size:.76rem;font-weight:400;margin-top:.1rem}
+.box{display:flex;align-items:center;gap:.25rem}
+.cur{color:var(--ink-faint);font-family:var(--mono);font-size:.95rem}
+input[type="text"]{
+  font:500 1rem/1 var(--mono); color:var(--ink); background:var(--sunk);
+  border:1px solid var(--rule); border-radius:8px; padding:.5rem .55rem;
+  width:7.5rem; text-align:right; font-variant-numeric:tabular-nums;
+}
+input[type="text"]:focus-visible{outline:2px solid var(--teal);outline-offset:1px;border-color:transparent}
+input.pct{width:3.6rem}
+
+.owner{display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;border-top:1px solid var(--rule)}
+.owner .nm{flex:1;min-width:0;font-size:.95rem;font-weight:600}
+.owner .pay{font-family:var(--mono);font-size:1.05rem;font-weight:600;
+  font-variant-numeric:tabular-nums;white-space:nowrap;min-width:6.5rem;text-align:right}
+.owner.tot{border-top:2px solid var(--ink)}
+.owner.tot .nm{font-weight:600;color:var(--ink-soft);font-size:.86rem;
+  letter-spacing:.06em;text-transform:uppercase}
+.warn{padding:.2rem 1rem .7rem;color:var(--red);font-size:.82rem;min-height:0}
+
+.line{display:flex;align-items:baseline;gap:.75rem;padding:.42rem 1rem}
+.line .lab{flex:1;min-width:0;font-size:.9rem;color:var(--ink-soft)}
+.line .lab b{color:var(--ink);font-weight:600}
+.line .val{font-family:var(--mono);font-size:.95rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.line.rule{border-top:1px solid var(--rule);margin-top:.3rem;padding-top:.7rem}
+.sum{padding:.3rem 0 .6rem}
+
+.answer{background:var(--card);border:1px solid var(--rule);border-radius:12px;
+  padding:1.1rem 1rem 1.2rem;text-align:center}
+.answer .k{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+.answer .v{font-family:var(--mono);font-weight:600;letter-spacing:-.02em;
+  font-size:clamp(2rem,9vw,2.9rem);line-height:1.1;margin-top:.35rem;font-variant-numeric:tabular-nums}
+.answer .v.short{color:var(--red)}
+.answer .v.ok{color:var(--teal)}
+.answer .note{font-size:.86rem;color:var(--ink-soft);margin-top:.5rem;min-height:1.3em}
+
+footer{color:var(--ink-faint);font-size:.78rem;line-height:1.6;padding-top:.3rem}
+footer b{color:var(--ink-soft);font-weight:600}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <h1>Trio Cash Check</h1>
+    <p>Put in the week's figures and what is in the bank. This works out what to pay
+       each owner, and whether the account covers it.</p>
+  </header>
+
+  <div class="panel">
+    <h2>From the weekly email</h2>
+    <div class="field first">
+      <label for="net">Total net
+        <span class="hint">what the week cleared, before the salon's own bills</span></label>
+      <span class="box"><span class="cur">$</span>
+        <input id="net" type="text" inputmode="decimal" value="8442.95" autocomplete="off"></span>
+    </div>
+    <div class="field">
+      <label for="payroll">Total gross pay
+        <span class="hint">stylists and hourly, going out this week</span></label>
+      <span class="box"><span class="cur">$</span>
+        <input id="payroll" type="text" inputmode="decimal" value="12880.40" autocomplete="off"></span>
+    </div>
+    <div class="field">
+      <label for="saved">Saved off the top
+        <span class="hint">taken out before the owners split anything</span></label>
+      <span class="box">
+        <input id="saved" class="pct" type="text" inputmode="decimal" value="50" autocomplete="off">
+        <span class="cur">%</span></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>What is in the bank</h2>
+    <div class="field first">
+      <label for="bank">Bank total
+        <span class="hint">the balance now, before payroll goes out</span></label>
+      <span class="box"><span class="cur">$</span>
+        <input id="bank" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>What to pay each owner
+      <span class="sub">their share of what is left after savings</span></h2>
+    <div class="owner">
+      <span class="nm">Ashley</span>
+      <span class="box"><input id="p-ashley" class="pct" type="text" inputmode="decimal" value="45" autocomplete="off"><span class="cur">%</span></span>
+      <span class="pay" id="d-ashley">&mdash;</span>
+    </div>
+    <div class="owner">
+      <span class="nm">Brenna</span>
+      <span class="box"><input id="p-brenna" class="pct" type="text" inputmode="decimal" value="35" autocomplete="off"><span class="cur">%</span></span>
+      <span class="pay" id="d-brenna">&mdash;</span>
+    </div>
+    <div class="owner">
+      <span class="nm">Caylan</span>
+      <span class="box"><input id="p-caylan" class="pct" type="text" inputmode="decimal" value="20" autocomplete="off"><span class="cur">%</span></span>
+      <span class="pay" id="d-caylan">&mdash;</span>
+    </div>
+    <div class="owner tot">
+      <span class="nm">Paid out to owners</span>
+      <span class="pay" id="d-total">&mdash;</span>
+    </div>
+    <p class="warn" id="pct-warn"></p>
+  </div>
+
+  <div class="panel sum">
+    <div class="line"><span class="lab">Saved</span><span class="val" id="o-saved">&mdash;</span></div>
+    <div class="line rule"><span class="lab">Bank total</span><span class="val" id="o-bank">&mdash;</span></div>
+    <div class="line"><span class="lab">Less gross pay</span><span class="val" id="o-pay">&mdash;</span></div>
+    <div class="line"><span class="lab"><b>What I got</b></span><span class="val" id="o-got">&mdash;</span></div>
+    <div class="line"><span class="lab">Less the owners' draw</span><span class="val" id="o-less">&mdash;</span></div>
+  </div>
+
+  <div class="answer">
+    <div class="k">Total left if paid in full</div>
+    <div class="v" id="o-left">&mdash;</div>
+    <p class="note" id="o-note">Put the bank total in above.</p>
+  </div>
+
+  <footer>
+    Caylan's pay for her own chair work is inside the gross pay figure, not her owner
+    draw, so what she is handed is the draw above plus her stylist pay.<br>
+    Nothing here is saved or sent anywhere. It is a sum, worked out in your browser.
+    It opens with the week of <b>26 to 31 October</b>, so replace the top two figures
+    with whatever the latest email says.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var keys = ["net","payroll","saved","bank","p-ashley","p-brenna","p-caylan"];
+  var outs = ["d-ashley","d-brenna","d-caylan","d-total","pct-warn",
+              "o-saved","o-bank","o-pay","o-got","o-less","o-left","o-note"];
+  var el = {};
+  keys.concat(outs).forEach(function (k) { el[k] = document.getElementById(k); });
+
+  function num(input) {
+    var v = parseFloat(String(input.value || "").replace(/[^0-9.\-]/g, ""));
+    return isNaN(v) ? null : v;
+  }
+  function cash(v) {
+    var s = Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (v < 0 ? "−$" : "$") + s;
+  }
+  function dash(node) { node.innerHTML = "&mdash;"; }
+
+  function run() {
+    var net = num(el.net), pay = num(el.payroll), bank = num(el.bank);
+    var savedPct = num(el.saved); if (savedPct === null) savedPct = 0;
+    savedPct = Math.min(100, Math.max(0, savedPct)) / 100;
+
+    var shares = { ashley: num(el["p-ashley"]) || 0,
+                   brenna: num(el["p-brenna"]) || 0,
+                   caylan: num(el["p-caylan"]) || 0 };
+    var shareSum = shares.ashley + shares.brenna + shares.caylan;
+    el["pct-warn"].textContent = Math.abs(shareSum - 100) < 0.01
+      ? "" : "The owner shares add up to " + shareSum + "%, not 100%.";
+
+    if (net === null) {
+      ["d-ashley","d-brenna","d-caylan","d-total","o-saved"].forEach(function (k) { dash(el[k]); });
+    } else {
+      var saved = net * savedPct, remaining = net - saved;
+      el["o-saved"].textContent = cash(saved);
+      ["ashley","brenna","caylan"].forEach(function (n) {
+        el["d-" + n].textContent = cash(remaining * (shares[n] / 100));
+      });
+      el["d-total"].textContent = cash(remaining * (shareSum / 100));
+    }
+
+    if (net === null || pay === null) {
+      ["o-bank","o-pay","o-got","o-less","o-left"].forEach(function (k) { dash(el[k]); });
+      el["o-left"].className = "v";
+      el["o-note"].textContent = "Fill in the net and the gross pay from the email.";
+      save();
+      return;
+    }
+
+    var owners = net * (1 - savedPct) * (shareSum / 100);
+    el["o-pay"].textContent = cash(-pay);
+    el["o-less"].textContent = cash(-owners);
+
+    if (bank === null) {
+      dash(el["o-bank"]); dash(el["o-got"]); dash(el["o-left"]);
+      el["o-left"].className = "v";
+      el["o-note"].textContent = "Put the bank total in above.";
+      save();
+      return;
+    }
+
+    var got = bank - pay, left = got - owners;
+    el["o-bank"].textContent = cash(bank);
+    el["o-got"].textContent = cash(got);
+    el["o-left"].textContent = cash(left);
+    el["o-left"].className = "v " + (left < 0 ? "short" : "ok");
+    el["o-note"].textContent = got < 0
+      ? "The bank does not cover payroll. Short by " + cash(Math.abs(got)) + "."
+      : (left < 0
+         ? "Payroll is covered, the owners' draw is not. Short by " + cash(Math.abs(left)) + "."
+         : "Payroll and the owners' draw are both covered.");
+    save();
+  }
+
+  function save() {
+    try {
+      var keep = {};
+      ["net","payroll","saved","p-ashley","p-brenna","p-caylan"].forEach(function (k) {
+        keep[k] = el[k].value;
+      });
+      localStorage.setItem("trio-cash-check", JSON.stringify(keep));
+    } catch (e) {}
+  }
+
+  try {
+    var was = JSON.parse(localStorage.getItem("trio-cash-check") || "null");
+    if (was) {
+      Object.keys(was).forEach(function (k) { if (el[k] && was[k]) el[k].value = was[k]; });
+    }
+  } catch (e) {}
+
+  keys.forEach(function (k) { el[k].addEventListener("input", run); });
+  run();
+})();
+</script>
+
+</body>
+</html>
