@@ -5,20 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Trio Cash Check</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: one narrow column. Figures in, owner payouts next, bank reconciliation last. */
+/* Layout: one narrow column, week tabs pinned along the bottom like a spreadsheet. */
 :root{
-  --ground:#eef1f3;
-  --card:#ffffff;
-  --ink:#16202a;
-  --ink-soft:#5a6b78;
-  --ink-faint:#8b9aa5;
-  --rule:#d6dde2;
-  --sunk:#f5f7f8;
-  --teal:#0f6b63;
-  --red:#a8322a;
+  --ground:#eef1f3; --card:#ffffff; --ink:#16202a; --ink-soft:#5a6b78;
+  --ink-faint:#8b9aa5; --rule:#d6dde2; --sunk:#f5f7f8;
+  --teal:#0f6b63; --red:#a8322a;
   --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Consolas,monospace;
 }
@@ -37,15 +30,16 @@
 *{box-sizing:border-box}
 body{
   background:var(--ground); color:var(--ink); font-family:var(--sans);
-  line-height:1.5; -webkit-font-smoothing:antialiased;
+  line-height:1.5; -webkit-font-smoothing:antialiased; margin:0;
   padding-left:max(16px,env(safe-area-inset-left,0px));
   padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-block:clamp(1.5rem,5vw,3rem);
+  padding-block:clamp(1.5rem,5vw,3rem) 5.5rem;
 }
 .wrap{max-width:31rem;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem}
 
 header h1{font-size:clamp(1.5rem,5vw,1.9rem);font-weight:700;letter-spacing:-.02em;margin:0 0 .25rem;text-wrap:balance}
 header p{margin:0;color:var(--ink-soft);font-size:.9rem;max-width:34em}
+.printonly{display:none}
 
 .panel{background:var(--card);border:1px solid var(--rule);border-radius:12px}
 .panel > h2{
@@ -61,12 +55,13 @@ header p{margin:0;color:var(--ink-soft);font-size:.9rem;max-width:34em}
 .field .hint{display:block;color:var(--ink-faint);font-size:.76rem;font-weight:400;margin-top:.1rem}
 .box{display:flex;align-items:center;gap:.25rem}
 .cur{color:var(--ink-faint);font-family:var(--mono);font-size:.95rem}
-input[type="text"]{
+input[type="text"],input[type="date"]{
   font:500 1rem/1 var(--mono); color:var(--ink); background:var(--sunk);
   border:1px solid var(--rule); border-radius:8px; padding:.5rem .55rem;
   width:7.5rem; text-align:right; font-variant-numeric:tabular-nums;
 }
-input[type="text"]:focus-visible{outline:2px solid var(--teal);outline-offset:1px;border-color:transparent}
+input[type="date"]{width:9.5rem;text-align:left}
+input:focus-visible{outline:2px solid var(--teal);outline-offset:1px;border-color:transparent}
 input.pct{width:3.6rem}
 
 .owner{display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;border-top:1px solid var(--rule)}
@@ -76,7 +71,7 @@ input.pct{width:3.6rem}
 .owner.tot{border-top:2px solid var(--ink)}
 .owner.tot .nm{font-weight:600;color:var(--ink-soft);font-size:.86rem;
   letter-spacing:.06em;text-transform:uppercase}
-.warn{padding:.2rem 1rem .7rem;color:var(--red);font-size:.82rem;min-height:0}
+.warn{padding:.2rem 1rem .7rem;color:var(--red);font-size:.82rem;margin:0}
 
 .line{display:flex;align-items:baseline;gap:.75rem;padding:.42rem 1rem}
 .line .lab{flex:1;min-width:0;font-size:.9rem;color:var(--ink-soft)}
@@ -94,38 +89,51 @@ input.pct{width:3.6rem}
 .answer .v.ok{color:var(--teal)}
 .answer .note{font-size:.86rem;color:var(--ink-soft);margin-top:.5rem;min-height:1.3em}
 
-.actions{text-align:center;padding-top:.2rem}
-.actions button{
-  font:600 .95rem/1 var(--sans); color:var(--card); background:var(--ink);
-  border:none; border-radius:9px; padding:.8rem 1.5rem; cursor:pointer;
+.actions{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:center}
+button{font:600 .9rem/1 var(--sans);border-radius:9px;padding:.75rem 1.2rem;cursor:pointer;border:1px solid var(--rule)}
+button.primary{color:var(--card);background:var(--ink);border-color:var(--ink)}
+button.ghost{color:var(--ink);background:var(--card)}
+button:hover{opacity:.88}
+button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.saved-msg{text-align:center;color:var(--teal);font-size:.82rem;min-height:1.2em;margin:0}
+
+footer{color:var(--ink-faint);font-size:.78rem;line-height:1.6}
+footer b{color:var(--ink-soft);font-weight:600}
+
+/* week tabs, pinned along the bottom */
+.tabs{
+  position:fixed; left:0; right:0; bottom:0; z-index:5;
+  background:var(--card); border-top:1px solid var(--rule);
+  padding:.5rem max(16px,env(safe-area-inset-left,0px));
+  padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px));
+  display:flex; align-items:center; gap:.4rem; overflow-x:auto;
 }
-.actions button:hover{opacity:.88}
-.actions button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-.hint-c{color:var(--ink-faint);font-size:.78rem;margin:.5rem 0 0}
-.printonly{display:none}
+.tabs .lab{color:var(--ink-faint);font-size:.68rem;letter-spacing:.12em;
+  text-transform:uppercase;font-weight:600;white-space:nowrap;padding-right:.2rem}
+.tabs button{
+  font:600 .82rem/1 var(--mono); padding:.45rem .7rem; border-radius:7px;
+  background:var(--sunk); color:var(--ink-soft); border:1px solid var(--rule);
+  white-space:nowrap; font-variant-numeric:tabular-nums;
+}
+.tabs button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.tabs .none{color:var(--ink-faint);font-size:.8rem}
 
 @media print{
-  /* a record, not a screenshot of a form: no boxes, no buttons, no dark ground */
   :root{--ground:#fff;--card:#fff;--ink:#000;--ink-soft:#333;--ink-faint:#555;
         --rule:#bbb;--sunk:#fff;--teal:#000;--red:#000;color-scheme:light}
   body{padding:0;background:#fff}
   .wrap{max-width:100%;gap:.5rem}
-  .actions,.hint,header p{display:none}
+  .actions,.hint,.tabs,.saved-msg,header p:not(.printonly){display:none}
   .printonly{display:block;color:#555;font-size:.8rem;margin-top:.15rem}
   .panel{border:1px solid #bbb;break-inside:avoid}
-  input[type="text"],input[type="date"]{
-    border:none;background:transparent;padding:0;width:auto;font-weight:600}
+  input[type="text"],input[type="date"]{border:none;background:transparent;padding:0;width:auto;font-weight:600}
   .answer{border:2px solid #000}
   .answer .v{color:#000 !important}
   footer{font-size:.7rem;color:#666}
 }
-footer{color:var(--ink-faint);font-size:.78rem;line-height:1.6;padding-top:.3rem}
-footer b{color:var(--ink-soft);font-weight:600}
 </style>
 </head>
 <body>
-
-
 <div class="wrap">
   <header>
     <h1>Trio Cash Check</h1>
@@ -137,63 +145,46 @@ footer b{color:var(--ink-soft);font-weight:600}
   <div class="panel">
     <h2>From the weekly email</h2>
     <div class="field first">
-      <label for="net">Total net
-        <span class="hint">what the week cleared, before the salon's own bills</span></label>
-      <span class="box"><span class="cur">$</span>
-        <input id="net" type="text" inputmode="decimal" value="8442.95" autocomplete="off"></span>
-    </div>
-    <div class="field">
-      <label for="payroll">Total gross pay
-        <span class="hint">stylists and hourly, going out this week</span></label>
-      <span class="box"><span class="cur">$</span>
-        <input id="payroll" type="text" inputmode="decimal" value="12880.40" autocomplete="off"></span>
-    </div>
-    <div class="field">
-      <label for="weekend">Week ending
-        <span class="hint">the Saturday this covers</span></label>
+      <label for="weekend">Week ending<span class="hint">the Saturday this covers</span></label>
       <span class="box"><input id="weekend" type="date" autocomplete="off"></span>
     </div>
     <div class="field">
-      <label for="saved">Saved off the top
-        <span class="hint">taken out before the owners split anything</span></label>
-      <span class="box">
-        <input id="saved" class="pct" type="text" inputmode="decimal" value="50" autocomplete="off">
-        <span class="cur">%</span></span>
+      <label for="net">Total net<span class="hint">what the week cleared, before the salon's own bills</span></label>
+      <span class="box"><span class="cur">$</span>
+        <input id="net" type="text" inputmode="decimal" autocomplete="off"></span>
+    </div>
+    <div class="field">
+      <label for="payroll">Total gross pay<span class="hint">stylists and hourly, going out this week</span></label>
+      <span class="box"><span class="cur">$</span>
+        <input id="payroll" type="text" inputmode="decimal" autocomplete="off"></span>
+    </div>
+    <div class="field">
+      <label for="saved">Saved off the top<span class="hint">taken out before the owners split anything</span></label>
+      <span class="box"><input id="saved" class="pct" type="text" inputmode="decimal" value="50" autocomplete="off"><span class="cur">%</span></span>
     </div>
   </div>
 
   <div class="panel">
     <h2>What is in the bank</h2>
     <div class="field first">
-      <label for="bank">Bank total
-        <span class="hint">the balance now, before payroll goes out</span></label>
+      <label for="bank">Bank total<span class="hint">the balance now, before payroll goes out</span></label>
       <span class="box"><span class="cur">$</span>
         <input id="bank" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span>
     </div>
   </div>
 
   <div class="panel">
-    <h2>What to pay each owner
-      <span class="sub">their share of what is left after savings</span></h2>
-    <div class="owner">
-      <span class="nm">Ashley</span>
+    <h2>What to pay each owner<span class="sub">their share of what is left after savings</span></h2>
+    <div class="owner"><span class="nm">Ashley</span>
       <span class="box"><input id="p-ashley" class="pct" type="text" inputmode="decimal" value="45" autocomplete="off"><span class="cur">%</span></span>
-      <span class="pay" id="d-ashley">&mdash;</span>
-    </div>
-    <div class="owner">
-      <span class="nm">Brenna</span>
+      <span class="pay" id="d-ashley">&mdash;</span></div>
+    <div class="owner"><span class="nm">Brenna</span>
       <span class="box"><input id="p-brenna" class="pct" type="text" inputmode="decimal" value="35" autocomplete="off"><span class="cur">%</span></span>
-      <span class="pay" id="d-brenna">&mdash;</span>
-    </div>
-    <div class="owner">
-      <span class="nm">Caylan</span>
+      <span class="pay" id="d-brenna">&mdash;</span></div>
+    <div class="owner"><span class="nm">Caylan</span>
       <span class="box"><input id="p-caylan" class="pct" type="text" inputmode="decimal" value="20" autocomplete="off"><span class="cur">%</span></span>
-      <span class="pay" id="d-caylan">&mdash;</span>
-    </div>
-    <div class="owner tot">
-      <span class="nm">Paid out to owners</span>
-      <span class="pay" id="d-total">&mdash;</span>
-    </div>
+      <span class="pay" id="d-caylan">&mdash;</span></div>
+    <div class="owner tot"><span class="nm">Paid out to owners</span><span class="pay" id="d-total">&mdash;</span></div>
     <p class="warn" id="pct-warn"></p>
   </div>
 
@@ -212,26 +203,31 @@ footer b{color:var(--ink-soft);font-weight:600}
   </div>
 
   <div class="actions">
-    <button id="print" type="button">Save this week as a PDF</button>
-    <p class="hint-c">Opens your browser's print box. Choose <b>Save as PDF</b> as the printer.</p>
+    <button id="save" class="primary" type="button">Save this week</button>
+    <button id="print" class="ghost" type="button">Save as PDF</button>
+    <button id="csv" class="ghost" type="button">Download all weeks</button>
   </div>
+  <p class="saved-msg" id="msg"></p>
 
   <footer>
     Caylan's pay for her own chair work is inside the gross pay figure, not her owner
     draw, so what she is handed is the draw above plus her stylist pay.<br>
-    Nothing here is saved or sent anywhere. It is a sum, worked out in your browser.
-    It opens with the week of <b>26 to 31 October</b>, so replace the top two figures
-    with whatever the latest email says.
+    Saved weeks are kept in this browser only. They are not shared with anyone else and
+    they go if the browser's data is cleared, so keep the PDFs as the real record and
+    use <b>Download all weeks</b> now and then for a backup.
   </footer>
 </div>
 
+<nav class="tabs" id="tabs" aria-label="Saved weeks"></nav>
+
 <script>
 (function () {
-  var keys = ["net","payroll","saved","bank","p-ashley","p-brenna","p-caylan"];
-  var outs = ["d-ashley","d-brenna","d-caylan","d-total","pct-warn",
-              "o-saved","o-bank","o-pay","o-got","o-less","o-left","o-note"];
+  var STORE = "trio-weeks";
+  var FIELDS = ["weekend","net","payroll","saved","bank","p-ashley","p-brenna","p-caylan"];
   var el = {};
-  keys.concat(outs).forEach(function (k) { el[k] = document.getElementById(k); });
+  FIELDS.concat(["d-ashley","d-brenna","d-caylan","d-total","pct-warn","o-saved","o-bank",
+                 "o-pay","o-got","o-less","o-left","o-note","tabs","msg","stamp"])
+        .forEach(function (k) { el[k] = document.getElementById(k); });
 
   function num(input) {
     var v = parseFloat(String(input.value || "").replace(/[^0-9.\-]/g, ""));
@@ -241,40 +237,96 @@ footer b{color:var(--ink-soft);font-weight:600}
     var s = Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return (v < 0 ? "−$" : "$") + s;
   }
-  function dash(node) { node.innerHTML = "&mdash;"; }
+  function dash(n) { n.innerHTML = "&mdash;"; }
+  function lastSaturday() {
+    var d = new Date();
+    d.setDate(d.getDate() - ((d.getDay() + 1) % 7 || 7));
+    return d.toISOString().slice(0, 10);
+  }
+  function pretty(iso) {
+    if (!iso) return "";
+    var d = new Date(iso + "T12:00:00");
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
 
+  /* ---------- saved weeks ---------- */
+  function readAll() {
+    try { return JSON.parse(localStorage.getItem(STORE) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+  function writeAll(obj) {
+    try { localStorage.setItem(STORE, JSON.stringify(obj)); return true; }
+    catch (e) { return false; }
+  }
+  function current() {
+    var o = {};
+    FIELDS.forEach(function (k) { o[k] = el[k].value; });
+    return o;
+  }
+  function load(week) {
+    var all = readAll();
+    if (!all[week]) return;
+    FIELDS.forEach(function (k) { if (all[week][k] !== undefined) el[k].value = all[week][k]; });
+    paint(); run(); stamp();
+  }
+  function paint() {
+    var all = readAll();
+    var weeks = Object.keys(all).sort();            // oldest left, like spreadsheet tabs
+    el.tabs.innerHTML = "";
+    var lab = document.createElement("span");
+    lab.className = "lab"; lab.textContent = "Weeks";
+    el.tabs.appendChild(lab);
+    if (!weeks.length) {
+      var none = document.createElement("span");
+      none.className = "none"; none.textContent = "nothing saved yet";
+      el.tabs.appendChild(none);
+      return;
+    }
+    weeks.forEach(function (w) {
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = pretty(w);
+      b.title = "Week ending " + w;
+      if (w === el.weekend.value) b.className = "on";
+      b.addEventListener("click", function () { load(w); });
+      el.tabs.appendChild(b);
+    });
+    el.tabs.scrollLeft = el.tabs.scrollWidth;
+  }
+
+  /* ---------- the sum ---------- */
   function run() {
     var net = num(el.net), pay = num(el.payroll), bank = num(el.bank);
     var savedPct = num(el.saved); if (savedPct === null) savedPct = 0;
     savedPct = Math.min(100, Math.max(0, savedPct)) / 100;
 
-    var shares = { ashley: num(el["p-ashley"]) || 0,
-                   brenna: num(el["p-brenna"]) || 0,
-                   caylan: num(el["p-caylan"]) || 0 };
-    var shareSum = shares.ashley + shares.brenna + shares.caylan;
+    var sh = { ashley: num(el["p-ashley"]) || 0, brenna: num(el["p-brenna"]) || 0,
+               caylan: num(el["p-caylan"]) || 0 };
+    var shareSum = sh.ashley + sh.brenna + sh.caylan;
     el["pct-warn"].textContent = Math.abs(shareSum - 100) < 0.01
       ? "" : "The owner shares add up to " + shareSum + "%, not 100%.";
 
     if (net === null) {
       ["d-ashley","d-brenna","d-caylan","d-total","o-saved"].forEach(function (k) { dash(el[k]); });
     } else {
-      var saved = net * savedPct, remaining = net - saved;
-      el["o-saved"].textContent = cash(saved);
+      var remaining = net * (1 - savedPct);
+      el["o-saved"].textContent = cash(net * savedPct);
+      var paid = 0;
       ["ashley","brenna","caylan"].forEach(function (n) {
-        el["d-" + n].textContent = cash(remaining * (shares[n] / 100));
+        var v = Math.round(remaining * (sh[n] / 100) * 100) / 100;   // pay whole cents
+        paid += v;
+        el["d-" + n].textContent = cash(v);
       });
-      el["d-total"].textContent = cash(remaining * (shareSum / 100));
+      el["d-total"].textContent = cash(paid);
+      el._paid = paid;
     }
 
     if (net === null || pay === null) {
       ["o-bank","o-pay","o-got","o-less","o-left"].forEach(function (k) { dash(el[k]); });
       el["o-left"].className = "v";
       el["o-note"].textContent = "Fill in the net and the gross pay from the email.";
-      save();
       return;
     }
-
-    var owners = net * (1 - savedPct) * (shareSum / 100);
+    var owners = el._paid || 0;
     el["o-pay"].textContent = cash(-pay);
     el["o-less"].textContent = cash(-owners);
 
@@ -282,10 +334,8 @@ footer b{color:var(--ink-soft);font-weight:600}
       dash(el["o-bank"]); dash(el["o-got"]); dash(el["o-left"]);
       el["o-left"].className = "v";
       el["o-note"].textContent = "Put the bank total in above.";
-      save();
       return;
     }
-
     var got = bank - pay, left = got - owners;
     el["o-bank"].textContent = cash(bank);
     el["o-got"].textContent = cash(got);
@@ -296,49 +346,67 @@ footer b{color:var(--ink-soft);font-weight:600}
       : (left < 0
          ? "Payroll is covered, the owners' draw is not. Short by " + cash(Math.abs(left)) + "."
          : "Payroll and the owners' draw are both covered.");
-    save();
   }
 
-  function save() {
-    try {
-      var keep = {};
-      ["net","payroll","saved","p-ashley","p-brenna","p-caylan"].forEach(function (k) {
-        keep[k] = el[k].value;
-      });
-      localStorage.setItem("trio-cash-check", JSON.stringify(keep));
-    } catch (e) {}
-  }
-
-  try {
-    var was = JSON.parse(localStorage.getItem("trio-cash-check") || "null");
-    if (was) {
-      Object.keys(was).forEach(function (k) { if (el[k] && was[k]) el[k].value = was[k]; });
-    }
-  } catch (e) {}
-
-  var wk = document.getElementById("weekend");
-  if (!wk.value) {
-    var d = new Date();
-    d.setDate(d.getDate() - ((d.getDay() + 1) % 7 || 7));   // the Saturday just gone
-    wk.value = d.toISOString().slice(0, 10);
-  }
   function stamp() {
-    var d = wk.value ? new Date(wk.value + "T12:00:00") : null;
-    document.getElementById("stamp").textContent =
+    var iso = el.weekend.value;
+    var d = iso ? new Date(iso + "T12:00:00") : null;
+    el.stamp.textContent =
       (d ? "Week ending " + d.toLocaleDateString("en-US",
             { weekday: "long", month: "long", day: "numeric", year: "numeric" }) + " · " : "") +
       "prepared " + new Date().toLocaleDateString("en-US",
             { month: "long", day: "numeric", year: "numeric" });
   }
-  wk.addEventListener("input", stamp);
-  stamp();
+  function say(t) { el.msg.textContent = t; setTimeout(function () { el.msg.textContent = ""; }, 3500); }
+
+  /* ---------- buttons ---------- */
+  document.getElementById("save").addEventListener("click", function () {
+    var w = el.weekend.value;
+    if (!w) { say("Put a week-ending date in first."); return; }
+    var all = readAll();
+    all[w] = current();
+    say(writeAll(all) ? "Saved week ending " + pretty(w) + "."
+                      : "This browser will not let the page save anything.");
+    paint();
+  });
 
   document.getElementById("print").addEventListener("click", function () { window.print(); });
 
-  keys.forEach(function (k) { el[k].addEventListener("input", run); });
-  run();
+  document.getElementById("csv").addEventListener("click", function () {
+    var all = readAll(), weeks = Object.keys(all).sort();
+    if (!weeks.length) { say("Nothing saved yet."); return; }
+    var head = ["Week ending","Total net","Gross pay","Saved %","Bank total",
+                "Ashley %","Brenna %","Caylan %"];
+    var rows = [head.join(",")];
+    weeks.forEach(function (w) {
+      var r = all[w];
+      rows.push([w, r.net, r.payroll, r.saved, r.bank,
+                 r["p-ashley"], r["p-brenna"], r["p-caylan"]]
+                .map(function (v) { return '"' + String(v === undefined ? "" : v) + '"'; }).join(","));
+    });
+    var blob = new Blob([rows.join("\n")], { type: "text/csv" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "trio-cash-check.csv";
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  });
+
+  /* ---------- start up on the newest saved week ---------- */
+  var all = readAll(), weeks = Object.keys(all).sort();
+  if (weeks.length) {
+    FIELDS.forEach(function (k) {
+      var v = all[weeks[weeks.length - 1]][k];
+      if (v !== undefined) el[k].value = v;
+    });
+  } else {
+    el.weekend.value = lastSaturday();
+  }
+  FIELDS.forEach(function (k) {
+    el[k].addEventListener("input", function () { run(); if (k === "weekend") { paint(); stamp(); } });
+  });
+  paint(); stamp(); run();
 })();
 </script>
-
 </body>
 </html>
