@@ -94,6 +94,31 @@ input.pct{width:3.6rem}
 .answer .v.ok{color:var(--teal)}
 .answer .note{font-size:.86rem;color:var(--ink-soft);margin-top:.5rem;min-height:1.3em}
 
+.actions{text-align:center;padding-top:.2rem}
+.actions button{
+  font:600 .95rem/1 var(--sans); color:var(--card); background:var(--ink);
+  border:none; border-radius:9px; padding:.8rem 1.5rem; cursor:pointer;
+}
+.actions button:hover{opacity:.88}
+.actions button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.hint-c{color:var(--ink-faint);font-size:.78rem;margin:.5rem 0 0}
+.printonly{display:none}
+
+@media print{
+  /* a record, not a screenshot of a form: no boxes, no buttons, no dark ground */
+  :root{--ground:#fff;--card:#fff;--ink:#000;--ink-soft:#333;--ink-faint:#555;
+        --rule:#bbb;--sunk:#fff;--teal:#000;--red:#000;color-scheme:light}
+  body{padding:0;background:#fff}
+  .wrap{max-width:100%;gap:.5rem}
+  .actions,.hint,header p{display:none}
+  .printonly{display:block;color:#555;font-size:.8rem;margin-top:.15rem}
+  .panel{border:1px solid #bbb;break-inside:avoid}
+  input[type="text"],input[type="date"]{
+    border:none;background:transparent;padding:0;width:auto;font-weight:600}
+  .answer{border:2px solid #000}
+  .answer .v{color:#000 !important}
+  footer{font-size:.7rem;color:#666}
+}
 footer{color:var(--ink-faint);font-size:.78rem;line-height:1.6;padding-top:.3rem}
 footer b{color:var(--ink-soft);font-weight:600}
 </style>
@@ -106,6 +131,7 @@ footer b{color:var(--ink-soft);font-weight:600}
     <h1>Trio Cash Check</h1>
     <p>Put in the week's figures and what is in the bank. This works out what to pay
        each owner, and whether the account covers it.</p>
+    <p class="printonly" id="stamp"></p>
   </header>
 
   <div class="panel">
@@ -121,6 +147,11 @@ footer b{color:var(--ink-soft);font-weight:600}
         <span class="hint">stylists and hourly, going out this week</span></label>
       <span class="box"><span class="cur">$</span>
         <input id="payroll" type="text" inputmode="decimal" value="12880.40" autocomplete="off"></span>
+    </div>
+    <div class="field">
+      <label for="weekend">Week ending
+        <span class="hint">the Saturday this covers</span></label>
+      <span class="box"><input id="weekend" type="date" autocomplete="off"></span>
     </div>
     <div class="field">
       <label for="saved">Saved off the top
@@ -178,6 +209,11 @@ footer b{color:var(--ink-soft);font-weight:600}
     <div class="k">Total left if paid in full</div>
     <div class="v" id="o-left">&mdash;</div>
     <p class="note" id="o-note">Put the bank total in above.</p>
+  </div>
+
+  <div class="actions">
+    <button id="print" type="button">Save this week as a PDF</button>
+    <p class="hint-c">Opens your browser's print box. Choose <b>Save as PDF</b> as the printer.</p>
   </div>
 
   <footer>
@@ -279,6 +315,25 @@ footer b{color:var(--ink-soft);font-weight:600}
       Object.keys(was).forEach(function (k) { if (el[k] && was[k]) el[k].value = was[k]; });
     }
   } catch (e) {}
+
+  var wk = document.getElementById("weekend");
+  if (!wk.value) {
+    var d = new Date();
+    d.setDate(d.getDate() - ((d.getDay() + 1) % 7 || 7));   // the Saturday just gone
+    wk.value = d.toISOString().slice(0, 10);
+  }
+  function stamp() {
+    var d = wk.value ? new Date(wk.value + "T12:00:00") : null;
+    document.getElementById("stamp").textContent =
+      (d ? "Week ending " + d.toLocaleDateString("en-US",
+            { weekday: "long", month: "long", day: "numeric", year: "numeric" }) + " · " : "") +
+      "prepared " + new Date().toLocaleDateString("en-US",
+            { month: "long", day: "numeric", year: "numeric" });
+  }
+  wk.addEventListener("input", stamp);
+  stamp();
+
+  document.getElementById("print").addEventListener("click", function () { window.print(); });
 
   keys.forEach(function (k) { el[k].addEventListener("input", run); });
   run();
