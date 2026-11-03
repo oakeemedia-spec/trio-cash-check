@@ -212,6 +212,8 @@ footer b{color:var(--ink-soft);font-weight:600}
   <footer>
     Caylan's pay for her own chair work is inside the gross pay figure, not her owner
     draw, so what she is handed is the draw above plus her stylist pay.<br>
+    The page opens on the newest week on its own. Put the bank total in, press
+    <b>Save this week</b>, and it becomes a tab along the bottom.<br>
     Saved weeks are kept in this browser only. They are not shared with anyone else and
     they go if the browser's data is cleared, so keep the PDFs as the real record and
     use <b>Download all weeks</b> now and then for a backup.
@@ -222,6 +224,11 @@ footer b{color:var(--ink-soft);font-weight:600}
 
 <script>
 (function () {
+  /* The Sunday job rewrites the next line every week and pushes it up, so the
+     page is already showing last week before anyone types anything. Leave the
+     markers alone - that is how the script finds the line. */
+  /*LATEST*/ var LATEST = { weekend: "2026-10-31", net: "8442.95", payroll: "12880.40" }; /*ENDLATEST*/
+
   var STORE = "trio-weeks";
   var FIELDS = ["weekend","net","payroll","saved","bank","p-ashley","p-brenna","p-caylan"];
   var el = {};
@@ -394,12 +401,22 @@ footer b{color:var(--ink-soft);font-weight:600}
 
   /* ---------- start up on the newest saved week ---------- */
   var all = readAll(), weeks = Object.keys(all).sort();
-  if (weeks.length) {
+  var newest = weeks.length ? weeks[weeks.length - 1] : "";
+  if (newest) {
     FIELDS.forEach(function (k) {
-      var v = all[weeks[weeks.length - 1]][k];
+      var v = all[newest][k];
       if (v !== undefined) el[k].value = v;
     });
-  } else {
+  }
+  if (LATEST.weekend && LATEST.weekend > newest) {
+    // A newer week came in from the email than anything saved here. Show it,
+    // but keep the savings rate and splits from the last week she did, so a
+    // change she made on purpose is not quietly undone every Sunday.
+    el.weekend.value = LATEST.weekend;
+    el.net.value = LATEST.net;
+    el.payroll.value = LATEST.payroll;
+    el.bank.value = "";
+  } else if (!newest) {
     el.weekend.value = lastSaturday();
   }
   FIELDS.forEach(function (k) {
