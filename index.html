@@ -159,9 +159,14 @@ footer b{color:var(--ink-soft);font-weight:600}
         <input id="payroll" type="text" inputmode="decimal" autocomplete="off"></span>
     </div>
     <div class="field">
-      <label for="tax">Employer payroll taxes<span class="hint">the salon's share on top of gross pay, not the stylists'</span></label>
+      <label for="tax">Payroll tax payment<span class="hint">the salon's share, debited with the wages. Not the stylists' own tax</span></label>
       <span class="box"><span class="cur">$</span>
         <input id="tax" type="text" inputmode="decimal" autocomplete="off"></span>
+    </div>
+    <div class="field">
+      <label for="uitax">Unemployment tax set aside<span class="hint">earned this week, billed at the end of the quarter</span></label>
+      <span class="box"><span class="cur">$</span>
+        <input id="uitax" type="text" inputmode="decimal" autocomplete="off"></span>
     </div>
     <div class="field">
       <label for="saved">Saved off the top<span class="hint">taken out before the owners split anything</span></label>
@@ -195,10 +200,11 @@ footer b{color:var(--ink-soft);font-weight:600}
 
   <div class="panel sum">
     <div class="line"><span class="lab">Net after payroll taxes</span><span class="val" id="o-after">&mdash;</span></div>
+    <div class="line"><span class="lab">Unemployment tax held back</span><span class="val" id="o-ui">&mdash;</span></div>
     <div class="line"><span class="lab">Saved</span><span class="val" id="o-saved">&mdash;</span></div>
     <div class="line rule"><span class="lab">Bank total</span><span class="val" id="o-bank">&mdash;</span></div>
     <div class="line"><span class="lab">Less gross pay</span><span class="val" id="o-pay">&mdash;</span></div>
-    <div class="line"><span class="lab">Less payroll taxes</span><span class="val" id="o-tax">&mdash;</span></div>
+    <div class="line"><span class="lab">Less the payroll tax payment</span><span class="val" id="o-tax">&mdash;</span></div>
     <div class="line"><span class="lab"><b>What I got</b></span><span class="val" id="o-got">&mdash;</span></div>
     <div class="line"><span class="lab">Less the owners' draw</span><span class="val" id="o-less">&mdash;</span></div>
   </div>
@@ -219,8 +225,9 @@ footer b{color:var(--ink-soft);font-weight:600}
   <footer>
     Caylan's pay for her own chair work is inside the gross pay figure, not her owner
     draw, so what she is handed is the draw above plus her stylist pay.<br>
-    Total net is before the salon's own payroll taxes. Those come out before anything
-    is split, because they leave the bank with the wages.<br>
+    Total net is before the salon's own payroll taxes. The tax payment leaves the bank
+    with the wages. The unemployment tax is billed at the end of the quarter, so it stays
+    in the account, but it is already owed and is not the owners' to split.<br>
     The page opens on the newest week on its own. Put the bank total in, press
     <b>Save this week</b>, and it becomes a tab along the bottom.<br>
     Saved weeks are kept in this browser only. They are not shared with anyone else and
@@ -236,12 +243,12 @@ footer b{color:var(--ink-soft);font-weight:600}
   /* The Sunday job rewrites the next line every week and pushes it up, so the
      page is already showing last week before anyone types anything. Leave the
      markers alone - that is how the script finds the line. */
-  /*LATEST*/ var LATEST = { weekend: "2026-11-07", net: "6783.99", payroll: "10330.06", tax: "832.23" }; /*ENDLATEST*/
+  /*LATEST*/ var LATEST = { weekend: "2026-11-07", net: "6783.99", payroll: "10330.06", tax: "790.25", uitax: "41.98" }; /*ENDLATEST*/
 
   var STORE = "trio-weeks";
-  var FIELDS = ["weekend","net","payroll","tax","saved","bank","p-ashley","p-brenna","p-caylan"];
+  var FIELDS = ["weekend","net","payroll","tax","uitax","saved","bank","p-ashley","p-brenna","p-caylan"];
   var el = {};
-  FIELDS.concat(["d-ashley","d-brenna","d-caylan","d-total","pct-warn","o-after","o-saved","o-bank","o-tax",
+  FIELDS.concat(["d-ashley","d-brenna","d-caylan","d-total","pct-warn","o-after","o-ui","o-saved","o-bank","o-tax",
                  "o-pay","o-got","o-less","o-left","o-note","tabs","msg","stamp"])
         .forEach(function (k) { el[k] = document.getElementById(k); });
 
@@ -315,8 +322,11 @@ footer b{color:var(--ink-soft);font-weight:600}
     // The salon's own payroll taxes leave the bank with the wages, so they are
     // not the owners' money to split. Treated as zero only when the box is
     // empty, which is a week the email had no figure for.
-    var tax = num(el.tax) || 0;
-    var net = gross === null ? null : gross - tax;
+    // What the payroll company debits this week. The unemployment tax is billed
+    // quarterly, so it stays in the account, but it is already owed and so is
+    // never part of what the owners divide.
+    var tax = num(el.tax) || 0, ui = num(el.uitax) || 0;
+    var net = gross === null ? null : gross - tax - ui;
     var savedPct = num(el.saved); if (savedPct === null) savedPct = 0;
     savedPct = Math.min(100, Math.max(0, savedPct)) / 100;
 
@@ -327,6 +337,7 @@ footer b{color:var(--ink-soft);font-weight:600}
       ? "" : "The owner shares add up to " + shareSum + "%, not 100%.";
 
     el["o-tax"].textContent = cash(-tax);
+    el["o-ui"].textContent = cash(-ui);
     if (net === null) {
       ["d-ashley","d-brenna","d-caylan","d-total","o-saved","o-after"].forEach(function (k) { dash(el[k]); });
     } else {
@@ -398,12 +409,12 @@ footer b{color:var(--ink-soft);font-weight:600}
   document.getElementById("csv").addEventListener("click", function () {
     var all = readAll(), weeks = Object.keys(all).sort();
     if (!weeks.length) { say("Nothing saved yet."); return; }
-    var head = ["Week ending","Total net","Gross pay","Payroll taxes","Saved %","Bank total",
+    var head = ["Week ending","Total net","Gross pay","Payroll tax payment","Unemployment set aside","Saved %","Bank total",
                 "Ashley %","Brenna %","Caylan %"];
     var rows = [head.join(",")];
     weeks.forEach(function (w) {
       var r = all[w];
-      rows.push([w, r.net, r.payroll, r.tax, r.saved, r.bank,
+      rows.push([w, r.net, r.payroll, r.tax, r.uitax, r.saved, r.bank,
                  r["p-ashley"], r["p-brenna"], r["p-caylan"]]
                 .map(function (v) { return '"' + String(v === undefined ? "" : v) + '"'; }).join(","));
     });
@@ -432,6 +443,7 @@ footer b{color:var(--ink-soft);font-weight:600}
     el.net.value = LATEST.net;
     el.payroll.value = LATEST.payroll;
     el.tax.value = LATEST.tax || "";
+    el.uitax.value = LATEST.uitax || "";
     el.bank.value = "";
   } else if (!newest) {
     el.weekend.value = lastSaturday();
