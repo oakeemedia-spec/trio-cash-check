@@ -174,6 +174,11 @@ footer b{color:var(--ink-soft);font-weight:600}
         <input id="bout" type="text" inputmode="decimal" autocomplete="off"></span>
     </div>
     <div class="field">
+      <label for="costs">Salon running costs<span class="hint">rent, backbar, colour, utilities, insurance, software</span></label>
+      <span class="box"><span class="cur">$</span>
+        <input id="costs" type="text" inputmode="decimal" autocomplete="off"></span>
+    </div>
+    <div class="field">
       <label for="saved">Saved off the top<span class="hint">taken out before the owners split anything</span></label>
       <span class="box"><input id="saved" class="pct" type="text" inputmode="decimal" value="50" autocomplete="off"><span class="cur">%</span></span>
     </div>
@@ -201,6 +206,7 @@ footer b{color:var(--ink-soft);font-weight:600}
       <span class="pay" id="d-caylan">&mdash;</span></div>
     <div class="owner tot"><span class="nm">Paid out to owners</span><span class="pay" id="d-total">&mdash;</span></div>
     <p class="warn" id="pct-warn"></p>
+    <p class="warn" id="costs-warn"></p>
   </div>
 
   <div class="panel" id="bout-panel">
@@ -224,12 +230,13 @@ footer b{color:var(--ink-soft);font-weight:600}
 
   <div class="panel sum">
     <div class="line"><span class="lab">Less the boutique</span><span class="val" id="o-bout">&mdash;</span></div>
-    <div class="line"><span class="lab">Net after payroll taxes</span><span class="val" id="o-after">&mdash;</span></div>
+    <div class="line"><span class="lab"><b>What the week really left</b></span><span class="val" id="o-after">&mdash;</span></div>
     <div class="line"><span class="lab">Unemployment tax held back</span><span class="val" id="o-ui">&mdash;</span></div>
     <div class="line"><span class="lab">Saved</span><span class="val" id="o-saved">&mdash;</span></div>
     <div class="line rule"><span class="lab">Bank total</span><span class="val" id="o-bank">&mdash;</span></div>
     <div class="line"><span class="lab">Less gross pay</span><span class="val" id="o-pay">&mdash;</span></div>
     <div class="line"><span class="lab">Less the payroll tax payment</span><span class="val" id="o-tax">&mdash;</span></div>
+    <div class="line"><span class="lab">Less the salon's running costs</span><span class="val" id="o-costs">&mdash;</span></div>
     <div class="line"><span class="lab"><b>What I got</b></span><span class="val" id="o-got">&mdash;</span></div>
     <div class="line"><span class="lab">Less the owners' draw</span><span class="val" id="o-less">&mdash;</span></div>
   </div>
@@ -268,13 +275,13 @@ footer b{color:var(--ink-soft);font-weight:600}
   /* The Sunday job rewrites the next line every week and pushes it up, so the
      page is already showing last week before anyone types anything. Leave the
      markers alone - that is how the script finds the line. */
-  /*LATEST*/ var LATEST = { weekend: "2026-11-14", net: "8600.36", payroll: "11837.14", tax: "905.54", uitax: "19.83", bout: "182.50", bmargin: "0.5", bconfirmed: "no" }; /*ENDLATEST*/
+  /*LATEST*/ var LATEST = { weekend: "2026-11-14", net: "8600.36", payroll: "11837.14", tax: "905.54", uitax: "19.83", bout: "182.50", bmargin: "0.5", bconfirmed: "no", costs: "3118.23", costsreal: "no" }; /*ENDLATEST*/
 
   var STORE = "trio-weeks";
-  var FIELDS = ["weekend","net","payroll","tax","uitax","bout","saved","bank","p-ashley","p-brenna","p-caylan",
+  var FIELDS = ["weekend","net","payroll","tax","uitax","bout","costs","saved","bank","p-ashley","p-brenna","p-caylan",
                 "b-pct-brenna","b-pct-ashley","b-pct-caylan"];
   var el = {};
-  FIELDS.concat(["d-ashley","d-brenna","d-caylan","d-total","pct-warn","o-after","o-ui","o-saved","o-bank","o-tax","o-bout",
+  FIELDS.concat(["d-ashley","d-brenna","d-caylan","d-total","pct-warn","o-after","o-ui","o-saved","o-bank","o-tax","o-bout","o-costs","costs-warn",
                  "b-sales","b-cost","b-profit","b-saved","b-brenna","b-ashley","b-caylan",
                  "b-total","b-warn",
                  "o-pay","o-got","o-less","o-left","o-note","tabs","msg","stamp"])
@@ -357,7 +364,10 @@ footer b{color:var(--ink-soft);font-weight:600}
     // The boutique is split 50/25/25, not 45/35/20, so it leaves the salon's
     // pot before anything else happens to it. Left in, it gets divided twice.
     var bout = num(el.bout) || 0;
-    var net = gross === null ? null : gross - bout - tax - ui;
+    // Rent, backbar, colour, utilities and the rest. Without this the figure
+    // being split was the money left after WAGES, not the money left.
+    var costs = num(el.costs) || 0;
+    var net = gross === null ? null : gross - bout - tax - ui - costs;
     boutique(bout);
     var savedPct = num(el.saved); if (savedPct === null) savedPct = 0;
     savedPct = Math.min(100, Math.max(0, savedPct)) / 100;
@@ -370,6 +380,10 @@ footer b{color:var(--ink-soft);font-weight:600}
 
     el["o-tax"].textContent = cash(-tax);
     el["o-bout"].textContent = cash(-bout);
+    el["o-costs"].textContent = cash(-costs);
+    el["costs-warn"].textContent = (costs && LATEST.costsreal !== "yes")
+      ? "The running costs are an estimate. No bank statement reaches this week yet, so a typical week is standing in."
+      : "";
     el["o-ui"].textContent = cash(-ui);
     if (net === null) {
       ["d-ashley","d-brenna","d-caylan","d-total","o-saved","o-after"].forEach(function (k) { dash(el[k]); });
@@ -478,12 +492,12 @@ footer b{color:var(--ink-soft);font-weight:600}
   document.getElementById("csv").addEventListener("click", function () {
     var all = readAll(), weeks = Object.keys(all).sort();
     if (!weeks.length) { say("Nothing saved yet."); return; }
-    var head = ["Week ending","Total net","Gross pay","Payroll tax payment","Unemployment set aside","Boutique sales","Saved %","Bank total",
+    var head = ["Week ending","Total net","Gross pay","Payroll tax payment","Unemployment set aside","Boutique sales","Running costs","Saved %","Bank total",
                 "Ashley %","Brenna %","Caylan %"];
     var rows = [head.join(",")];
     weeks.forEach(function (w) {
       var r = all[w];
-      rows.push([w, r.net, r.payroll, r.tax, r.uitax, r.bout, r.saved, r.bank,
+      rows.push([w, r.net, r.payroll, r.tax, r.uitax, r.bout, r.costs, r.saved, r.bank,
                  r["p-ashley"], r["p-brenna"], r["p-caylan"]]
                 .map(function (v) { return '"' + String(v === undefined ? "" : v) + '"'; }).join(","));
     });
@@ -514,6 +528,7 @@ footer b{color:var(--ink-soft);font-weight:600}
     el.tax.value = LATEST.tax || "";
     el.uitax.value = LATEST.uitax || "";
     el.bout.value = LATEST.bout || "";
+    el.costs.value = LATEST.costs || "";
     el.bank.value = "";
   } else if (!newest) {
     el.weekend.value = lastSaturday();
