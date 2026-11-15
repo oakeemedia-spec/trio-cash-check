@@ -428,7 +428,10 @@ footer b{color:var(--ink-soft);font-weight:600}
   function boutique(sales) {
     var margin = (LATEST.bmargin === undefined ? 0.5 : parseFloat(LATEST.bmargin));
     if (!(margin >= 0 && margin <= 1)) margin = 0.5;
-    var profit = sales * margin, saved = profit * 0.5, pool = profit - saved;
+    // Round at every step, and the same way the Sunday email does, or the two
+    // disagree by a penny whenever a figure lands on half a cent.
+    var r2 = function (x) { return Math.round((x + Number.EPSILON) * 100) / 100; };
+    var profit = r2(sales * margin), saved = r2(profit * 0.5), pool = r2(profit - saved);
     el["b-sales"].textContent = cash(sales);
     el["b-cost"].textContent = cash(-(sales - profit));
     el["b-profit"].textContent = cash(profit);
@@ -436,13 +439,18 @@ footer b{color:var(--ink-soft);font-weight:600}
     var sh = { brenna: num(el["b-pct-brenna"]) || 0,
                ashley: num(el["b-pct-ashley"]) || 0,
                caylan: num(el["b-pct-caylan"]) || 0 };
-    var sum = sh.brenna + sh.ashley + sh.caylan, paid = 0;
-    ["brenna","ashley","caylan"].forEach(function (n) {
-      var v = Math.round(pool * (sh[n] / 100) * 100) / 100;
-      paid += v;
-      el["b-" + n].textContent = cash(v);
-    });
-    el["b-total"].textContent = cash(paid);
+    var sum = sh.brenna + sh.ashley + sh.caylan;
+    var names = ["brenna","ashley","caylan"];
+    var amts = names.map(function (n) { return r2(pool * (sh[n] / 100)); });
+    // the odd cent goes to the biggest share, so the three add up to the pool
+    var drift = r2(pool - amts.reduce(function (a, b) { return a + b; }, 0));
+    if (drift) {
+      var big = 0;
+      names.forEach(function (n, i) { if (sh[n] > sh[names[big]]) big = i; });
+      amts[big] = r2(amts[big] + drift);
+    }
+    names.forEach(function (n, i) { el["b-" + n].textContent = cash(amts[i]); });
+    el["b-total"].textContent = cash(r2(amts.reduce(function (a, b) { return a + b; }, 0)));
     var msgs = [];
     if (Math.abs(sum - 100) > 0.01) msgs.push("The boutique shares add up to " + sum + "%, not 100%.");
     if (LATEST.bconfirmed !== "yes") {
