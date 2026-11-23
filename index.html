@@ -71,6 +71,7 @@ input.pct{width:3.6rem}
 .owner.tot{border-top:2px solid var(--ink)}
 .owner.tot .nm{font-weight:600;color:var(--ink-soft);font-size:.86rem;
   letter-spacing:.06em;text-transform:uppercase}
+.note-small{color:#9a8f80;font-size:12px;line-height:1.5;margin:10px 0 0}
 .warn{padding:.2rem 1rem .7rem;color:var(--red);font-size:.82rem;margin:0}
 
 .line{display:flex;align-items:baseline;gap:.75rem;padding:.42rem 1rem}
@@ -210,21 +211,19 @@ footer b{color:var(--ink-soft);font-weight:600}
   </div>
 
   <div class="panel" id="bout-panel">
-    <h2>The boutique<span class="sub">Brenna takes half, the other two a quarter each</span></h2>
+    <h2>The boutique<span class="sub">Brenna takes 60%, the rest stays in the business</span></h2>
     <div class="line"><span class="lab">Boutique sales</span><span class="val" id="b-sales">&mdash;</span></div>
     <div class="line"><span class="lab">Less the cost of the stock sold</span><span class="val" id="b-cost">&mdash;</span></div>
     <div class="line"><span class="lab"><b>Boutique profit</b></span><span class="val" id="b-profit">&mdash;</span></div>
-    <div class="line"><span class="lab">Saved off the top</span><span class="val" id="b-saved">&mdash;</span></div>
     <div class="owner"><span class="nm">Brenna</span>
-      <span class="box"><input id="b-pct-brenna" class="pct" type="text" inputmode="decimal" value="50" autocomplete="off"><span class="cur">%</span></span>
+      <span class="box"><input id="b-pct-brenna" class="pct" type="text" inputmode="decimal" value="60" autocomplete="off"><span class="cur">%</span></span>
       <span class="pay" id="b-brenna">&mdash;</span></div>
-    <div class="owner"><span class="nm">Ashley</span>
-      <span class="box"><input id="b-pct-ashley" class="pct" type="text" inputmode="decimal" value="25" autocomplete="off"><span class="cur">%</span></span>
-      <span class="pay" id="b-ashley">&mdash;</span></div>
-    <div class="owner"><span class="nm">Caylan</span>
-      <span class="box"><input id="b-pct-caylan" class="pct" type="text" inputmode="decimal" value="25" autocomplete="off"><span class="cur">%</span></span>
-      <span class="pay" id="b-caylan">&mdash;</span></div>
-    <div class="owner tot"><span class="nm">Paid out from the boutique</span><span class="pay" id="b-total">&mdash;</span></div>
+    <div class="owner"><span class="nm">Back into the business</span>
+      <span class="box"><input id="b-pct-kept" class="pct" type="text" inputmode="decimal" value="40" autocomplete="off"><span class="cur">%</span></span>
+      <span class="pay" id="b-kept">&mdash;</span></div>
+    <div class="owner tot"><span class="nm">Paid out to Brenna</span><span class="pay" id="b-total">&mdash;</span></div>
+    <p class="note-small" id="b-note">The cost of the stock sold replaces what went out. The share kept back is
+      profit nobody draws, and it is what pays for growing the boutique.</p>
     <p class="warn" id="b-warn"></p>
   </div>
 
@@ -279,11 +278,10 @@ footer b{color:var(--ink-soft);font-weight:600}
 
   var STORE = "trio-weeks";
   var FIELDS = ["weekend","net","payroll","tax","uitax","bout","costs","saved","bank","p-ashley","p-brenna","p-caylan",
-                "b-pct-brenna","b-pct-ashley","b-pct-caylan"];
+                "b-pct-brenna","b-pct-kept"];
   var el = {};
   FIELDS.concat(["d-ashley","d-brenna","d-caylan","d-total","pct-warn","o-after","o-ui","o-saved","o-bank","o-tax","o-bout","o-costs","costs-warn",
-                 "b-sales","b-cost","b-profit","b-saved","b-brenna","b-ashley","b-caylan",
-                 "b-total","b-warn",
+                 "b-sales","b-cost","b-profit","b-brenna","b-kept","b-total","b-warn",
                  "o-pay","o-got","o-less","o-left","o-note","tabs","msg","stamp"])
         .forEach(function (k) { el[k] = document.getElementById(k); });
 
@@ -445,26 +443,25 @@ footer b{color:var(--ink-soft);font-weight:600}
     // Round at every step, and the same way the Sunday email does, or the two
     // disagree by a penny whenever a figure lands on half a cent.
     var r2 = function (x) { return Math.round((x + Number.EPSILON) * 100) / 100; };
-    var profit = r2(sales * margin), saved = r2(profit * 0.5), pool = r2(profit - saved);
+    // No savings step here: the share that is not Brenna's simply stays in the
+    // account. That retained money is what pays for growing the boutique.
+    var profit = r2(sales * margin), pool = profit;
     el["b-sales"].textContent = cash(sales);
     el["b-cost"].textContent = cash(-(sales - profit));
     el["b-profit"].textContent = cash(profit);
-    el["b-saved"].textContent = cash(-saved);
     var sh = { brenna: num(el["b-pct-brenna"]) || 0,
-               ashley: num(el["b-pct-ashley"]) || 0,
-               caylan: num(el["b-pct-caylan"]) || 0 };
-    var sum = sh.brenna + sh.ashley + sh.caylan;
-    var names = ["brenna","ashley","caylan"];
+               kept: num(el["b-pct-kept"]) || 0 };
+    var sum = sh.brenna + sh.kept;
+    var names = ["brenna","kept"];
     var amts = names.map(function (n) { return r2(pool * (sh[n] / 100)); });
-    // the odd cent goes to the biggest share, so the three add up to the pool
+    // the odd cent goes to the biggest share, so the two add up to the profit
     var drift = r2(pool - amts.reduce(function (a, b) { return a + b; }, 0));
     if (drift) {
-      var big = 0;
-      names.forEach(function (n, i) { if (sh[n] > sh[names[big]]) big = i; });
+      var big = sh.kept > sh.brenna ? 1 : 0;
       amts[big] = r2(amts[big] + drift);
     }
     names.forEach(function (n, i) { el["b-" + n].textContent = cash(amts[i]); });
-    el["b-total"].textContent = cash(r2(amts.reduce(function (a, b) { return a + b; }, 0)));
+    el["b-total"].textContent = cash(amts[0]);
     var msgs = [];
     if (Math.abs(sum - 100) > 0.01) msgs.push("The boutique shares add up to " + sum + "%, not 100%.");
     if (LATEST.bconfirmed !== "yes") {
